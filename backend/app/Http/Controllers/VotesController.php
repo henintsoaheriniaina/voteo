@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\VoteCreated;
+use App\Events\VoteDeleted;
 use App\Models\Option;
 use App\Models\Question;
 use App\Models\Vote;
@@ -25,9 +27,11 @@ class VotesController extends Controller
 
         if ($existingVote) {
             if ($existingVote->option_id === $option->id) {
+                $existingVote = $existingVote->load(['option', 'user']);
+
                 $option->decrement('votes_count');
                 $existingVote->delete();
-
+                broadcast(new VoteDeleted($existingVote));
                 return response([
                     "message" => "Vote removed successfully"
                 ]);
@@ -43,10 +47,11 @@ class VotesController extends Controller
         ]);
 
         $option->increment('votes_count');
-
+        $vote = $vote->load(['option', 'user']);
+        broadcast(new VoteCreated($vote));
         return response([
             "message" => "Vote updated successfully",
-            "vote" => $vote->load(['option', 'user'])
+            "vote" => $vote
         ]);
     }
 

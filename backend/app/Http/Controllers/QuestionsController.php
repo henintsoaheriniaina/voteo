@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\QuestionCreated;
 use App\Models\Question;
 use App\Models\Vote;
 use Illuminate\Http\Request;
@@ -60,9 +61,13 @@ class QuestionsController extends Controller implements HasMiddleware
             ]);
         }
 
+        $question = $question->load(['user', 'options']);
+        broadcast(
+            new QuestionCreated($question)
+        );
         return response([
             "message" => "Question created successfully",
-            "question" => $question->load(['user', 'options'])
+            "question" => $question
         ], 201);
     }
 
