@@ -11,29 +11,44 @@ class VotesController extends Controller
 {
     public function vote(Request $request, Question $question, Option $option)
     {
-        $vote = Vote::where('user_id', $request->user()->id)
-            ->where('option_id', $option->id)
-            ->first();
-        if ($vote) {
-            $option->votes_count = $option->votes_count - 1;
-            $option->save();
+        $user = $request->user();
 
-            $vote->delete();
+        if (!$question->options->contains($option)) {
             return response([
-                "message" => "Vote removed successfully"
-            ]);
-        } else {
-            $vote = Vote::create([
-                "user_id" => $request->user()->id,
-                "option_id" => $option->id
-            ]);
-            $option->votes_count = $vote->option->votes_count + 1;
-            $option->save();
-            return response([
-                "message" => "Vote added successfully",
-                "vote" => $vote->load(['option', 'user'])
-            ]);
+                "message" => "This option does not belong to the specified question."
+            ], 400);
         }
 
+        $existingVote = Vote::where('user_id', $user->id)
+            ->whereIn('option_id', $question->options->pluck('id'))
+            ->first();
+
+        if ($existingVote) {
+            if ($existingVote->option_id === $option->id) {
+                $option->decrement('votes_count');
+                $existingVote->delete();
+
+                return response([
+                    "message" => "Vote removed successfully"
+                ]);
+            }
+
+            $existingVote->option->decrement('votes_count');
+            $existingVote->delete();
+        }
+
+        $vote = Vote::create([
+            "user_id" => $user->id,
+            "option_id" => $option->id
+        ]);
+
+        $option->increment('votes_count');
+
+        return response([
+            "message" => "Vote updated successfully",
+            "vote" => $vote->load(['option', 'user'])
+        ]);
     }
+
+
 }
