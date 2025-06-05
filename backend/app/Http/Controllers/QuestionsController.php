@@ -27,7 +27,7 @@ class QuestionsController extends Controller implements HasMiddleware
      */
     public function index()
     {
-        $questions = Question::latest()->with(["user", "options"])->paginate(10);
+        $questions = Question::latest()->with(["user", "options"])->paginate(12);
         return response(["questions" => $questions]);
     }
 
